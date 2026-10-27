@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const store = require('./data/store');
+const { getCustomerInfo, saveCustomerInfo } = require('./customerInfo');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,11 +50,23 @@ app.get('/api/onboarding', (req, res) => {
       ...state,
       customerName: customer?.name || 'Unknown',
       customerIndustry: customer?.industry || '',
-      customerRegion: customer?.region || ''
+      customerRegion: customer?.region || '',
+      clientSource: customer?.clientSource || null
     };
   });
   
   res.json(dashboard);
+});
+
+// Collect, validate, and normalize customer info
+app.get('/api/customers/:id/customer-info', (req, res) => {
+  const result = getCustomerInfo(req.params.id);
+  res.status(result.status).json(result.body);
+});
+
+app.post('/api/customers/:id/customer-info', (req, res) => {
+  const result = saveCustomerInfo(req.params.id, req.body);
+  res.status(result.status).json(result.body);
 });
 
 // Get tenant by customer ID

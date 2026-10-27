@@ -48,6 +48,7 @@ function createCustomer(data) {
     industry: data.industry || '',
     region: data.region || '',
     contactEmail: data.contactEmail || '',
+    clientSource: data.clientSource || null,
     createdAt: data.createdAt || new Date().toISOString()
   };
 }

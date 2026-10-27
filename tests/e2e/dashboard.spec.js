@@ -24,18 +24,18 @@ test.describe('Onboarding Dashboard', () => {
   test('should display example customer in onboarding queue', async ({ page }) => {
     await page.goto('/');
 
-    // Wait for data to load and verify example customer is shown
-    await expect(page.locator('.customer-card')).toBeVisible();
-    await expect(page.locator('.customer-card h3')).toContainText('Acme Corporation');
+    await expect(page.getByRole('heading', { name: 'Acme Corporation' })).toBeVisible();
   });
 
   test('should switch between tabs', async ({ page }) => {
     await page.goto('/');
 
-    // Click on Customer Info tab
     await page.getByRole('button', { name: 'Customer Info' }).click();
-    
-    // Verify placeholder content is shown
-    await expect(page.locator('.placeholder h2')).toContainText('Customer Info');
+
+    await expect(page.getByRole('heading', { name: 'Customer Info' })).toBeVisible();
+    await page.getByRole('button', { name: 'ABC Accounting' }).click();
+    await expect(page.getByRole('cell', { name: 'Riverside Manufacturing LLC' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2023-01-15' })).toBeVisible();
+    await expect(page.getByText('10 of 10 clients are valid.')).toBeVisible();
   });
 });
