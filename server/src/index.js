@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const store = require('./data/store');
 const { getCustomerInfo, saveCustomerInfo } = require('./customerInfo');
+const { getDataMapping, saveDataMapping } = require('./dataMapping');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -66,6 +67,16 @@ app.get('/api/customers/:id/customer-info', (req, res) => {
 
 app.post('/api/customers/:id/customer-info', (req, res) => {
   const result = saveCustomerInfo(req.params.id, req.body);
+  res.status(result.status).json(result.body);
+});
+
+app.get('/api/customers/:id/data-mapping', (req, res) => {
+  const result = getDataMapping(req.params.id);
+  res.status(result.status).json(result.body);
+});
+
+app.post('/api/customers/:id/data-mapping', (req, res) => {
+  const result = saveDataMapping(req.params.id, req.body);
   res.status(result.status).json(result.body);
 });
 

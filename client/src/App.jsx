@@ -66,7 +66,7 @@ function App() {
           <CustomerInfoTab customers={onboardingData} onSaved={loadOnboarding} />
         )}
         {activeTab === 'data-mapping' && (
-          <PlaceholderTab title="Data Mapping" description="Map customer data to platform configuration" />
+          <DataMappingTab customers={onboardingData} onSaved={loadOnboarding} />
         )}
         {activeTab === 'tenant-setup' && (
           <PlaceholderTab title="Tenant Setup" description="Provision and configure customer tenant" />
@@ -329,6 +329,152 @@ function ProfileForm({ profile, onChange, onSave }) {
       </label>
       <button type="submit" className="primary-button">Save customer info</button>
     </form>
+  );
+}
+
+function DataMappingTab({ customers, onSaved }) {
+  const [selectedId, setSelectedId] = useState(customers[0]?.customerId || '');
+  const [mapping, setMapping] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [savedMessage, setSavedMessage] = useState('');
+
+  useEffect(() => {
+    if (!selectedId && customers[0]) setSelectedId(customers[0].customerId);
+  }, [customers, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    let ignore = false;
+    setMapping(null);
+    setLoading(true);
+    setError('');
+    setSavedMessage('');
+    fetch(`/api/customers/${selectedId}/data-mapping`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then((data) => {
+        if (ignore) return;
+        setMapping(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setMapping(null);
+        setError(err.message);
+        setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [selectedId]);
+
+  function updateColumn(fileId, column, platformField) {
+    setMapping((current) => ({
+      ...current,
+      files: current.files.map((file) => (
+        file.id === fileId
+          ? { ...file, mapping: { ...file.mapping, [column]: platformField } }
+          : file
+      ))
+    }));
+  }
+
+  function save() {
+    const mappings = Object.fromEntries(mapping.files.map((file) => [file.id, file.mapping]));
+    setError('');
+    setSavedMessage('');
+    fetch(`/api/customers/${selectedId}/data-mapping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings })
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then((data) => {
+        setMapping(data);
+        setSavedMessage('Data mapping saved. This step is complete.');
+        onSaved();
+      })
+      .catch((err) => setError(err.message));
+  }
+
+  return (
+    <div>
+      <h2 className="section-heading">Data Mapping</h2>
+      <p className="section-copy">Map customer data to platform configuration.</p>
+      <div className="customer-picker">
+        {customers.map((customer) => (
+          <button
+            key={customer.customerId}
+            type="button"
+            className={`picker-button ${selectedId === customer.customerId ? 'active' : ''}`}
+            onClick={() => setSelectedId(customer.customerId)}
+          >
+            {customer.customerName}
+          </button>
+        ))}
+      </div>
+      {loading && <p>Loading...</p>}
+      {error && <p className="field-error">{error}</p>}
+      {savedMessage && <p className="summary-line">{savedMessage}</p>}
+      {mapping && !mapping.customerInfoComplete && (
+        <p className="field-error">Finish customer info before mapping data.</p>
+      )}
+      {mapping?.files.map((file) => (
+        <section key={file.id} className="mapping-file">
+          <h3>{file.label}</h3>
+          <p className="section-copy">{file.sourceFile}</p>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Customer column</th>
+                  <th>Platform field</th>
+                </tr>
+              </thead>
+              <tbody>
+                {file.columns.map((column) => (
+                  <tr key={column}>
+                    <td>{column}</td>
+                    <td>
+                      <select
+                        aria-label={`${file.label} ${column}`}
+                        value={file.mapping[column] || ''}
+                        onChange={(event) => updateColumn(file.id, column, event.target.value)}
+                      >
+                        <option value="">Do not import</option>
+                        {file.fields.map((field) => (
+                          <option key={field.id} value={field.id}>
+                            {field.label}{field.required ? ' (required)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+      {mapping && (
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!mapping.customerInfoComplete}
+          onClick={save}
+        >
+          Save data mapping
+        </button>
+      )}
+    </div>
   );
 }
 
