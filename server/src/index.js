@@ -4,6 +4,7 @@ const store = require('./data/store');
 const { getCustomerInfo, saveCustomerInfo } = require('./customerInfo');
 const { getDataMapping, saveDataMapping } = require('./dataMapping');
 const { getTenantSetup, provisionTenant } = require('./tenantSetup');
+const { getImport, runImport } = require('./importData');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -88,6 +89,16 @@ app.get('/api/customers/:id/tenant-setup', (req, res) => {
 
 app.post('/api/customers/:id/tenant-setup', (req, res) => {
   const result = provisionTenant(req.params.id, req.body);
+  res.status(result.status).json(result.body);
+});
+
+app.get('/api/customers/:id/import', (req, res) => {
+  const result = getImport(req.params.id);
+  res.status(result.status).json(result.body);
+});
+
+app.post('/api/customers/:id/import', (req, res) => {
+  const result = runImport(req.params.id);
   res.status(result.status).json(result.body);
 });
 

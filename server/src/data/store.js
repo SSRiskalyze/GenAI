@@ -9,7 +9,8 @@ const { createCustomer, createTenant, createDefaultOnboardingSteps } = require('
 const store = {
   customers: [],
   tenants: [],
-  onboardingStates: []
+  onboardingStates: [],
+  platformData: {}
 };
 
 function seedCustomer({ id, name, industry, region, contactEmail, createdAt, clientSource, tenantId, plan }) {
@@ -140,6 +141,15 @@ function addOnboardingState(state) {
   return state;
 }
 
+function getPlatformData(customerId) {
+  return store.platformData[customerId] || null;
+}
+
+function savePlatformData(customerId, data) {
+  store.platformData[customerId] = data;
+  return data;
+}
+
 function updateOnboardingState(customerId, updates) {
   const index = store.onboardingStates.findIndex(s => s.customerId === customerId);
   if (index !== -1) {
@@ -161,5 +171,7 @@ module.exports = {
   getOnboardingState,
   getAllOnboardingStates,
   addOnboardingState,
-  updateOnboardingState
+  updateOnboardingState,
+  getPlatformData,
+  savePlatformData
 };
