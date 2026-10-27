@@ -12,37 +12,75 @@ const store = {
   onboardingStates: []
 };
 
+function seedCustomer({ id, name, industry, region, contactEmail, createdAt, clientSource, tenantId, plan }) {
+  store.customers.push(createCustomer({
+    id,
+    name,
+    industry,
+    region,
+    contactEmail,
+    clientSource,
+    createdAt
+  }));
+  store.tenants.push(createTenant({
+    id: tenantId,
+    customerId: id,
+    status: 'pending',
+    plan,
+    createdAt
+  }));
+  store.onboardingStates.push({
+    customerId: id,
+    steps: createDefaultOnboardingSteps(),
+    progressPercent: 0
+  });
+}
+
 // Seed with example data
 function seedData() {
-  // Example customer - Acme Corporation
-  const exampleCustomer = createCustomer({
+  seedCustomer({
     id: 'cust_001',
     name: 'Acme Corporation',
     industry: 'Manufacturing',
     region: 'North America',
     contactEmail: 'onboarding@acme.example.com',
-    createdAt: '2025-01-15T10:00:00Z'
+    createdAt: '2025-01-15T10:00:00Z',
+    tenantId: 'tenant_001',
+    plan: 'professional'
   });
-
-  // Example tenant for Acme
-  const exampleTenant = createTenant({
-    id: 'tenant_001',
-    customerId: 'cust_001',
-    status: 'pending',
-    plan: 'professional',
-    createdAt: '2025-01-15T10:00:00Z'
+  seedCustomer({
+    id: 'cust_abc',
+    name: 'ABC Accounting',
+    industry: 'Accounting',
+    region: 'United States',
+    contactEmail: 'onboarding@abc.example.com',
+    clientSource: 'CustomerA_ABCAccounting',
+    createdAt: '2025-02-01T10:00:00Z',
+    tenantId: 'tenant_abc',
+    plan: 'professional'
   });
-
-  // Example onboarding state - just started, nothing completed
-  const exampleOnboardingState = {
-    customerId: 'cust_001',
-    steps: createDefaultOnboardingSteps(),
-    progressPercent: 0
-  };
-
-  store.customers.push(exampleCustomer);
-  store.tenants.push(exampleTenant);
-  store.onboardingStates.push(exampleOnboardingState);
+  seedCustomer({
+    id: 'cust_xyz',
+    name: 'XYZ Financial Services',
+    industry: 'Financial Services',
+    region: 'United States',
+    contactEmail: 'onboarding@xyz.example.com',
+    clientSource: 'CustomerB_XYZFinancialServices',
+    createdAt: '2025-02-02T10:00:00Z',
+    tenantId: 'tenant_xyz',
+    plan: 'professional'
+  });
+  seedCustomer({
+    id: 'cust_premier',
+    name: 'Premier Bookkeeping',
+    industry: 'Bookkeeping',
+    region: 'United Kingdom',
+    contactEmail: 'onboarding@premier.example.com',
+    clientSource: 'CustomerC_PremierBookkeeping',
+    createdAt: '2025-02-03T10:00:00Z',
+    tenantId: 'tenant_premier',
+    plan: 'professional'
+  });
 }
 
 // Initialize with seed data
@@ -59,6 +97,13 @@ function getCustomerById(id) {
 
 function addCustomer(customer) {
   store.customers.push(customer);
+  return customer;
+}
+
+function updateCustomer(id, updates) {
+  const customer = store.customers.find((item) => item.id === id);
+  if (!customer) return null;
+  Object.assign(customer, updates, { id: customer.id });
   return customer;
 }
 
@@ -101,6 +146,7 @@ module.exports = {
   getCustomers,
   getCustomerById,
   addCustomer,
+  updateCustomer,
   getTenants,
   getTenantByCustomerId,
   addTenant,
