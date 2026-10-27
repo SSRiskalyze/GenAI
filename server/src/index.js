@@ -3,6 +3,7 @@ const cors = require('cors');
 const store = require('./data/store');
 const { getCustomerInfo, saveCustomerInfo } = require('./customerInfo');
 const { getDataMapping, saveDataMapping } = require('./dataMapping');
+const { getTenantSetup, provisionTenant } = require('./tenantSetup');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -77,6 +78,16 @@ app.get('/api/customers/:id/data-mapping', (req, res) => {
 
 app.post('/api/customers/:id/data-mapping', (req, res) => {
   const result = saveDataMapping(req.params.id, req.body);
+  res.status(result.status).json(result.body);
+});
+
+app.get('/api/customers/:id/tenant-setup', (req, res) => {
+  const result = getTenantSetup(req.params.id);
+  res.status(result.status).json(result.body);
+});
+
+app.post('/api/customers/:id/tenant-setup', (req, res) => {
+  const result = provisionTenant(req.params.id, req.body);
   res.status(result.status).json(result.body);
 });
 

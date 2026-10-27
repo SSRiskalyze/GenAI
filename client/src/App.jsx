@@ -69,7 +69,7 @@ function App() {
           <DataMappingTab customers={onboardingData} onSaved={loadOnboarding} />
         )}
         {activeTab === 'tenant-setup' && (
-          <PlaceholderTab title="Tenant Setup" description="Provision and configure customer tenant" />
+          <TenantSetupTab customers={onboardingData} onSaved={loadOnboarding} />
         )}
         {activeTab === 'import' && (
           <PlaceholderTab title="Import" description="Import customer data into the platform" />
@@ -473,6 +473,130 @@ function DataMappingTab({ customers, onSaved }) {
         >
           Save data mapping
         </button>
+      )}
+    </div>
+  );
+}
+
+function TenantSetupTab({ customers, onSaved }) {
+  const [selectedId, setSelectedId] = useState(customers[0]?.customerId || '');
+  const [setup, setSetup] = useState(null);
+  const [plan, setPlan] = useState('professional');
+  const [region, setRegion] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [savedMessage, setSavedMessage] = useState('');
+
+  useEffect(() => {
+    if (!selectedId && customers[0]) setSelectedId(customers[0].customerId);
+  }, [customers, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    let ignore = false;
+    setSetup(null);
+    setLoading(true);
+    setError('');
+    setSavedMessage('');
+    fetch(`/api/customers/${selectedId}/tenant-setup`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then((data) => {
+        if (ignore) return;
+        setSetup(data);
+        setPlan(data.tenant?.plan || 'professional');
+        setRegion(data.tenant?.region || '');
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setSetup(null);
+        setError(err.message);
+        setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [selectedId]);
+
+  function createTenant(event) {
+    event.preventDefault();
+    setError('');
+    setSavedMessage('');
+    fetch(`/api/customers/${selectedId}/tenant-setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, region })
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then((data) => {
+        setSetup(data);
+        setPlan(data.tenant.plan);
+        setRegion(data.tenant.region);
+        setSavedMessage('Tenant created. This step is complete.');
+        onSaved();
+      })
+      .catch((err) => setError(err.message));
+  }
+
+  const created = setup?.tenant?.status === 'active';
+  const planLabel = {
+    starter: 'Starter',
+    professional: 'Professional',
+    enterprise: 'Enterprise'
+  };
+
+  return (
+    <div>
+      <h2 className="section-heading">Tenant Setup</h2>
+      <p className="section-copy">Create and configure the customer tenant.</p>
+      <div className="customer-picker">
+        {customers.map((customer) => (
+          <button
+            key={customer.customerId}
+            type="button"
+            className={`picker-button ${selectedId === customer.customerId ? 'active' : ''}`}
+            onClick={() => setSelectedId(customer.customerId)}
+          >
+            {customer.customerName}
+          </button>
+        ))}
+      </div>
+      {loading && <p>Loading...</p>}
+      {error && <p className="field-error">{error}</p>}
+      {savedMessage && <p className="summary-line">{savedMessage}</p>}
+      {setup && !setup.dataMappingComplete && (
+        <p className="field-error">Finish data mapping before creating the tenant.</p>
+      )}
+      {setup?.tenant && (
+        <form className="profile-form" onSubmit={createTenant}>
+          <p className="summary-line">
+            Status: {created ? 'Active' : 'Not created'}
+            {created ? ` · ${setup.tenant.id}` : ''}
+          </p>
+          <label>
+            Plan
+            <select aria-label="Plan" value={plan} onChange={(event) => setPlan(event.target.value)}>
+              {(setup.plans || []).map((item) => (
+                <option key={item} value={item}>{planLabel[item] || item}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Region
+            <input aria-label="Region" value={region} onChange={(event) => setRegion(event.target.value)} />
+          </label>
+          <button type="submit" className="primary-button" disabled={!setup.dataMappingComplete}>
+            {created ? 'Save tenant configuration' : 'Create tenant'}
+          </button>
+        </form>
       )}
     </div>
   );
