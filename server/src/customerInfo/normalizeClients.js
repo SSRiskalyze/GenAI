@@ -241,6 +241,13 @@ function normalizeClients(csvText, sourceKey) {
 
 module.exports = {
   SCHEMAS,
+  ENTITY_MAP,
+  STATUS_MAP,
   normalizeClients,
-  parseCsv
+  parseCsv,
+  rowsToObjects,
+  normalizeDate,
+  normalizeContact,
+  normalizeTerms,
+  normalizeRevenue
 };

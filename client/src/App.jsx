@@ -72,7 +72,7 @@ function App() {
           <TenantSetupTab customers={onboardingData} onSaved={loadOnboarding} />
         )}
         {activeTab === 'import' && (
-          <PlaceholderTab title="Import" description="Import customer data into the platform" />
+          <ImportTab customers={onboardingData} onSaved={loadOnboarding} />
         )}
       </main>
     </div>
@@ -597,6 +597,175 @@ function TenantSetupTab({ customers, onSaved }) {
             {created ? 'Save tenant configuration' : 'Create tenant'}
           </button>
         </form>
+      )}
+    </div>
+  );
+}
+
+const PREVIEW_COLUMNS = {
+  clients: [
+    ['name', 'Name'],
+    ['status', 'Status'],
+    ['entityType', 'Type'],
+    ['startDate', 'Start date'],
+    ['paymentTerms', 'Terms']
+  ],
+  contacts: [
+    ['firstName', 'First name'],
+    ['lastName', 'Last name'],
+    ['email', 'Email'],
+    ['status', 'Status'],
+    ['preferredChannel', 'Channel']
+  ],
+  accounts: [
+    ['accountCode', 'Code'],
+    ['name', 'Name'],
+    ['accountType', 'Type'],
+    ['normalBalance', 'Balance'],
+    ['active', 'Active']
+  ],
+  transactions: [
+    ['date', 'Date'],
+    ['direction', 'Debit or credit'],
+    ['amount', 'Amount'],
+    ['paymentMethod', 'Payment method'],
+    ['status', 'Status']
+  ]
+};
+
+function ImportTab({ customers, onSaved }) {
+  const [selectedId, setSelectedId] = useState(customers[0]?.customerId || '');
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [savedMessage, setSavedMessage] = useState('');
+
+  useEffect(() => {
+    if (!selectedId && customers[0]) setSelectedId(customers[0].customerId);
+  }, [customers, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    let ignore = false;
+    setPreview(null);
+    setLoading(true);
+    setError('');
+    setSavedMessage('');
+    fetch(`/api/customers/${selectedId}/import`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then((data) => {
+        if (ignore) return;
+        setPreview(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setPreview(null);
+        setError(err.message);
+        setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [selectedId]);
+
+  function importData() {
+    setError('');
+    setSavedMessage('');
+    fetch(`/api/customers/${selectedId}/import`, { method: 'POST' })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      })
+      .then((data) => {
+        setPreview(data);
+        setSavedMessage('Customer data imported. This step is complete.');
+        onSaved();
+      })
+      .catch((err) => setError(err.message));
+  }
+
+  const readyLabel = preview?.files
+    ?.map((file) => `${file.total} ${file.label.toLowerCase()}`)
+    .join(', ');
+
+  return (
+    <div>
+      <h2 className="section-heading">Import</h2>
+      <p className="section-copy">Import customer data into the platform.</p>
+      <div className="customer-picker">
+        {customers.map((customer) => (
+          <button
+            key={customer.customerId}
+            type="button"
+            className={`picker-button ${selectedId === customer.customerId ? 'active' : ''}`}
+            onClick={() => setSelectedId(customer.customerId)}
+          >
+            {customer.customerName}
+          </button>
+        ))}
+      </div>
+      {loading && <p>Loading...</p>}
+      {error && <p className="field-error">{error}</p>}
+      {savedMessage && <p className="summary-line">{savedMessage}</p>}
+      {preview && !preview.tenantSetupComplete && (
+        <p className="field-error">Finish tenant setup before importing data.</p>
+      )}
+      {preview?.mode === 'profile' && preview.profile && (
+        <p className="summary-line">
+          Status: {preview.imported ? 'Imported' : 'Not imported'}
+          {' · '}
+          {preview.profile.name}
+          {preview.profile.contactEmail ? ` · ${preview.profile.contactEmail}` : ''}
+        </p>
+      )}
+      {preview?.mode === 'files' && (
+        <p className="summary-line">
+          Status: {preview.imported ? 'Imported' : 'Not imported'}
+          {readyLabel ? ` · ${readyLabel} ready` : ''}
+        </p>
+      )}
+      {preview?.issues?.length > 0 && (
+        <p className="field-error">{preview.issues[0]}</p>
+      )}
+      {preview?.files?.map((file) => (
+        <section key={file.id} className="mapping-file">
+          <h3>{file.label}</h3>
+          <p className="section-copy">{file.total} ready · showing {file.preview.length}</p>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {PREVIEW_COLUMNS[file.id].map(([, label]) => <th key={label}>{label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {file.preview.map((row) => (
+                  <tr key={`${file.id}-${row.clientId || row.contactId || row.accountCode || row.transactionId || row.name}`}>
+                    {PREVIEW_COLUMNS[file.id].map(([field]) => (
+                      <td key={field}>{row[field] ?? ''}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+      {preview && (
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!preview.tenantSetupComplete || !preview.ready}
+          onClick={importData}
+        >
+          {preview.imported ? 'Import again' : 'Import data'}
+        </button>
       )}
     </div>
   );
