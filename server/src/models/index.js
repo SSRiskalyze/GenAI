@@ -64,6 +64,7 @@ function createTenant(data) {
     customerId: data.customerId || '',
     status: data.status || 'pending',
     plan: data.plan || 'starter',
+    region: data.region || '',
     createdAt: data.createdAt || new Date().toISOString()
   };
 }

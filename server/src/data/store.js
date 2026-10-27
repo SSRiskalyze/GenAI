@@ -120,6 +120,13 @@ function addTenant(tenant) {
   return tenant;
 }
 
+function updateTenant(customerId, updates) {
+  const tenant = store.tenants.find((item) => item.customerId === customerId);
+  if (!tenant) return null;
+  Object.assign(tenant, updates, { id: tenant.id, customerId: tenant.customerId });
+  return tenant;
+}
+
 function getOnboardingState(customerId) {
   return store.onboardingStates.find(s => s.customerId === customerId);
 }
@@ -150,6 +157,7 @@ module.exports = {
   getTenants,
   getTenantByCustomerId,
   addTenant,
+  updateTenant,
   getOnboardingState,
   getAllOnboardingStates,
   addOnboardingState,
